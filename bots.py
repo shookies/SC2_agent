@@ -95,6 +95,22 @@ class ProtossAgent(base_agent.BaseAgent):
         units_xy = [(unit.x, unit.y) for unit in units]
         return np.linalg.norm(np.array(units_xy) - np.array(xy), axis=1)
 
+    def select_build_worker(self, obs, x, y):
+
+        probes = self.get_my_completed_units_by_type(obs, units.Protoss.Probe)
+
+        if probes:
+            distances_to_point = self.get_distances(obs, probes, (x, y))
+            min_index = np.argmin(distances_to_point)
+            print("min_index shape: " + str(min_index.shape))
+            # if min_index.shape :
+            probe = np.random.choice(probes[min_index])
+            # else:
+            probe = probes[min_index]
+            return probe
+        return None
+
+
     # -----------------ACTIONS----------------
 
     def do_nothing(self, obs):
@@ -130,7 +146,6 @@ class ProtossAgent(base_agent.BaseAgent):
         return actions.RAW_FUNCTIONS.no_op()
 
 
-
     def build_assimilator(self, obs):
 
         geysers = [unit for unit in obs.observation.raw_units if unit.unit_type in [units.Neutral.VespeneGeyser]]
@@ -138,15 +153,10 @@ class ProtossAgent(base_agent.BaseAgent):
         distances = self.get_distances(obs, geysers, (nexus.x, nexus.y))
         geyser = geysers[np.argmin(distances)]
 
-        probes = self.get_my_completed_units_by_type(obs, units.Protoss.Probe)
-        distances_to_geyser = self.get_distances(obs, probes, (geyser.x, geyser.y))
-        probe = probes[np.argmin(distances_to_geyser)]
+        probe = self.select_build_worker(obs, geyser.x, geyser.y)
 
-
-        probe = self.select_build_worker((geyser.x, geyser.y))
-
-        if obs.observation.player.minerals >= 75 and probes:
-            return actions.RAW_FUNCTIONS.Build_Assimilator_unit("now", probe.tag, (geyser.x, geyser.y))
+        if obs.observation.player.minerals >= 75 and probe:
+            return actions.RAW_FUNCTIONS.Build_Assimilator_unit("now", probe.tag, geyser.tag)
 
         return actions.RAW_FUNCTIONS.no_op()
 
