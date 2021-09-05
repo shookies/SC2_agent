@@ -6,6 +6,7 @@ from sc2.unit import Unit
 from sc2 import units
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.ability_id import AbilityId
+from sc2.ids.upgrade_id import UpgradeId
 import numpy as np
 
 FULL_SATURATION = 22
@@ -28,8 +29,8 @@ class Shloompy(sc2.BotAI):
         await self.build_pylons()
         await self.build_assimilators()
         await self.follow_build()
-        # await self.set_rally_points()
-        await self.build_units()
+        # await self.build_units()
+        await self.research()
 
 
     ###########ACTIONS###########
@@ -192,9 +193,6 @@ class Shloompy(sc2.BotAI):
         for rf in self.structures(UnitTypeId.ROBOTICSFACILITY):
             rf(AbilityId.SMART, self.army_gather_point)
 
-
-
-
     async def build_units(self):
 
         for gw in self.structures(UnitTypeId.GATEWAY).ready.idle:
@@ -212,12 +210,76 @@ class Shloompy(sc2.BotAI):
             elif self.can_afford(UnitTypeId.IMMORTAL):
                 rf.train(UnitTypeId.IMMORTAL)
 
+    async def research(self):
 
+        await self.twilight_research()
+        await self.forge_research()
+
+    async def twilight_research(self):
+
+        tcs = self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready
+        for tc in tcs:
+            if self.can_afford(AbilityId.RESEARCH_CHARGE) and not self.already_pending_upgrade(UpgradeId.CHARGE):
+                tc.research(UpgradeId.CHARGE)
+
+            elif self.already_pending_upgrade(UpgradeId.CHARGE) == 1 and self.can_afford(AbilityId.RESEARCH_BLINK):
+                tc.research(UpgradeId.BLINKTECH)
+
+    async def forge_research(self):
+
+        forges = self.structures(UnitTypeId.FORGE).ready
+        if not forges:
+            return
+        w1 = self.already_pending_upgrade(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1)
+        w2 = self.already_pending_upgrade(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL2)
+        w3 = self.already_pending_upgrade(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL3)
+
+        a1 = self.already_pending_upgrade(UpgradeId.PROTOSSGROUNDARMORSLEVEL1)
+        a2 = self.already_pending_upgrade(UpgradeId.PROTOSSGROUNDARMORSLEVEL2)
+        a3 = self.already_pending_upgrade(UpgradeId.PROTOSSGROUNDARMORSLEVEL3)
+
+        for forge in forges:
+            if forge.is_idle:
+                if not w1:
+                    if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1):
+                        forge.research(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1)
+                    else:
+                        return
+
+                elif not w2:
+                    if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL2):
+                        forge.research(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL2)
+                    else:
+                        return  #TODO break instead of return? (case where cant afford w2 but can upgrade a1)
+
+                elif not w3:
+                    if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL3):
+                        forge.research(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL3)
+                    else:
+                        return
+
+                if not a1:
+                    if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL1):
+                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL1)
+                    else:
+                        return
+
+                elif not a2:
+                    if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL2):
+                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL2)
+                    else:
+                        return  # TODO break instead of return? (case where cant afford w2 but can upgrade a1)
+
+                elif not a3:
+                    if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3):
+                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL3)
+                    else:
+                        return
 def main():
     sc2.run_game(
-        sc2.maps.get("Simple64"),
+        sc2.maps.get("AcolyteLE"),
         [Bot(sc2.Race.Protoss, Shloompy()), Computer(sc2.Race.Terran, sc2.Difficulty.Hard)],
-        realtime=True
+        realtime=False
     )
 
 main()
