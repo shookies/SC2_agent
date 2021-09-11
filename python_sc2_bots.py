@@ -11,6 +11,11 @@ import numpy as np
 
 FULL_SATURATION = 22
 
+DESIRED_ARCHON_RATIO = 0.25
+DESIRED_IMMORTAL_RATIO = 0.25
+DESIRED_ZEALOT_RATIO = 0.4
+DESIRED_STALKER_RATIO = 0.1
+
 class Shloompy(sc2.BotAI):
 
     def __init__(self):
@@ -29,19 +34,14 @@ class Shloompy(sc2.BotAI):
         await self.build_pylons()
         await self.build_assimilators()
         await self.follow_build()
-        # await self.build_units()
+        await self.train_army()
         await self.research()
+        await self.gather_army()
 
 
     ###########ACTIONS###########
 
-    # async def distribute_workers(self):
-    #     ass = self.structures(UnitTypeId.ASSIMILATOR)
-    #     if ass:
-    #         print(ass.random.assigned_harvesters)
-    #
-    #     if self.idle_worker_count:
-    #         idle_probes = self.workers.filter(lambda probe: probe.is_idle)
+
     #
 
     async def build_probes(self):
@@ -118,7 +118,7 @@ class Shloompy(sc2.BotAI):
                 self.structures(UnitTypeId.GATEWAY).amount + self.already_pending(UnitTypeId.GATEWAY) < 2):
 
                     await self.build(UnitTypeId.GATEWAY, near=pylon.position.towards(self.game_info.map_center, np.random.choice(3)))
-                    await self.set_rally_points()
+                    # await self.set_rally_points()
 
                 #take natural
                 if (self.can_afford(UnitTypeId.NEXUS)
@@ -127,7 +127,7 @@ class Shloompy(sc2.BotAI):
                     and self.structures(UnitTypeId.NEXUS).amount < 3):
 
                     await self.expand_now()
-                    await self.set_rally_points()
+                    # await self.set_rally_points()
 
                 #build robo facility
                 elif (self.can_afford(UnitTypeId.ROBOTICSFACILITY)
@@ -145,7 +145,7 @@ class Shloompy(sc2.BotAI):
                     and self.structures(UnitTypeId.ROBOTICSFACILITY).ready
                     and not self.structures(UnitTypeId.TWILIGHTCOUNCIL)
                     and not self.already_pending(UnitTypeId.TWILIGHTCOUNCIL)):
-                    await self.set_rally_points()
+                    # await self.set_rally_points()
                     await self.build(UnitTypeId.TWILIGHTCOUNCIL,near= pylon.position.towards(self.game_info.map_center, np.random.choice(3)))
 
                 #build forge
@@ -161,7 +161,7 @@ class Shloompy(sc2.BotAI):
                         self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4
                         and self.structures(UnitTypeId.FORGE).ready):
                     await self.build(UnitTypeId.GATEWAY, near=pylon.position.towards(self.game_info.map_center, np.random.choice(3)))
-                    await self.set_rally_points()
+                    # await self.set_rally_points()
 
                 #build templar archives
                 elif (self.can_afford(UnitTypeId.TEMPLARARCHIVE)
@@ -173,27 +173,29 @@ class Shloompy(sc2.BotAI):
                                      near=pylon.position.towards(self.game_info.map_center, np.random.choice(3)))
 
                 #go to 12 gates
-                elif (self.can_afford(UnitTypeId.GATEWAY) and
-                        self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 12
-                        and self.structures(UnitTypeId.NEXUS).amount > 2):
+                elif (self.structures(UnitTypeId.TEMPLARARCHIVE).ready
+                    and self.can_afford(UnitTypeId.GATEWAY)
+                    and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 12
+                    and self.structures(UnitTypeId.NEXUS).amount > 2):
+
                     await self.build(UnitTypeId.GATEWAY, near=pylon.position.towards(self.game_info.map_center, np.random.choice(3)))
-                    await self.set_rally_points()
+                    # await self.set_rally_points()
 
-    async def set_rally_points(self):
+    # async def set_rally_points(self):
+    #
+    #
+    #     if self.structures(UnitTypeId.NEXUS).amount == 2:
+    #         self.army_gather_point = self.structures(UnitTypeId.NEXUS)[1].position.towards(self.game_info.map_center, 10)
+    #
+    #
+    #     for gw in self.structures(UnitTypeId.GATEWAY):
+    #         gw(AbilityId.SMART, self.army_gather_point)
+    #
+    #
+    #     for rf in self.structures(UnitTypeId.ROBOTICSFACILITY):
+    #         rf(AbilityId.SMART, self.army_gather_point)
 
-
-        if self.structures(UnitTypeId.NEXUS).amount == 2:
-            self.army_gather_point = self.structures(UnitTypeId.NEXUS)[1].position.towards(self.game_info.map_center, 10)
-
-
-        for gw in self.structures(UnitTypeId.GATEWAY):
-            gw(AbilityId.SMART, self.army_gather_point)
-
-
-        for rf in self.structures(UnitTypeId.ROBOTICSFACILITY):
-            rf(AbilityId.SMART, self.army_gather_point)
-
-    async def build_units(self):
+    async def build_starter_units(self):
 
         for gw in self.structures(UnitTypeId.GATEWAY).ready.idle:
 
@@ -203,17 +205,22 @@ class Shloompy(sc2.BotAI):
             elif self.can_afford(UnitTypeId.STALKER):
 
                 gw.train(UnitTypeId.STALKER)
-        for rf in self.structures(UnitTypeId.ROBOTICSFACILITY).ready.idle:
-            if self.can_afford(UnitTypeId.OBSERVER) and self.already_pending(UnitTypeId.OBSERVER) == 0 and self.units(UnitTypeId.OBSERVER).amount == 0:
-                rf.train(UnitTypeId.OBSERVER)
-
-            elif self.can_afford(UnitTypeId.IMMORTAL):
-                rf.train(UnitTypeId.IMMORTAL)
 
     async def research(self):
 
+        await self.warpgate_research()
         await self.twilight_research()
         await self.forge_research()
+
+    async def warpgate_research(self):
+
+        if self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) > 0:
+            return
+        else:
+            if self.can_afford(AbilityId.RESEARCH_WARPGATE):
+                ccs = self.structures(UnitTypeId.CYBERNETICSCORE).ready
+                for cc in ccs:
+                    cc.research(UpgradeId.WARPGATERESEARCH)
 
     async def twilight_research(self):
 
@@ -275,6 +282,102 @@ class Shloompy(sc2.BotAI):
                         forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL3)
                     else:
                         return
+
+    async def select_warp_in_pylon(self):
+        """
+        selects the outermost nexus and finds a pylon closest to it
+        :return: the selected pylon Unit ID
+        """
+        last_nexus = self.townhalls[-1]
+        pylons = sorted(self.structures(UnitTypeId.PYLON).ready, key= lambda py: py.distance_to(last_nexus))
+        if pylons:
+            return pylons[0]
+
+        return None
+
+    async def warp_in_unit(self, AID, UID):
+        """
+
+        :param AID: Ability ID of warping in the unit (for warpgate)
+        :param UID: Unit ID (for warp in command)
+        :return:
+        """
+
+        for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
+            abilities = await self.get_available_abilities(warpgate)
+
+            if AID in abilities:
+                pylon = await self.select_warp_in_pylon()
+                if pylon is None:
+                    return
+                pos = pylon.position.random_on_distance(4)
+                placement = await self.find_placement(AID, pos, placement_step= 1)
+                if placement is None:
+                    print("Can't find warp in placement")
+                    return
+                warpgate.warp_in(UID, placement)
+
+    async def evaluate_army_composition(self):
+
+        army = self.units.not_structure.exclude_type(UnitTypeId.PROBE)
+        army_size = army.amount
+        archon_size = army(UnitTypeId.ARCHON).ready.amount
+        immortal_size = army(UnitTypeId.IMMORTAL).amount
+        zealot_size = army(UnitTypeId.ZEALOT).amount
+        stalker_size = army(UnitTypeId.STALKER).amount
+
+        archon_ratio = 0 if archon_size == 0 else archon_size / army_size
+        immortal_ratio = 0 if immortal_size == 0 else immortal_size / army_size
+        zealot_ratio = 0 if zealot_size == 0 else zealot_size / army_size
+        stalker_ratio = 0 if stalker_size == 0 else stalker_size / army_size
+        print("army size " + str(army_size) + ", archons " + str(archon_size) + ", immorties " + str(immortal_size) + ", zealotbois " + str(zealot_size) + ", stalkers " + str(stalker_size))
+        return [archon_ratio, stalker_ratio, zealot_ratio, immortal_ratio]
+
+
+    async def train_army(self):
+
+
+        if self.structures(UnitTypeId.GATEWAY).ready.idle:
+            await self.build_starter_units()
+
+        archon_ratio, stalker_ratio, zealot_ratio, immortal_ratio = await self.evaluate_army_composition()
+
+        if self.can_afford(UnitTypeId.OBSERVER) and self.already_pending(UnitTypeId.OBSERVER) == 0 and self.units(UnitTypeId.OBSERVER).amount == 0:
+            if self.structures(UnitTypeId.ROBOTICSFACILITY).ready:
+                self.structures(UnitTypeId.ROBOTICSFACILITY).idle.random.train(UnitTypeId.OBSERVER)
+
+        if immortal_ratio < DESIRED_IMMORTAL_RATIO:
+            if self.structures(UnitTypeId.ROBOTICSFACILITY).ready:
+                for rf in self.structures(UnitTypeId.ROBOTICSFACILITY).idle:
+                    if self.can_afford(UnitTypeId.IMMORTAL):
+                        rf.train(UnitTypeId.IMMORTAL)
+
+        templars = self.units(UnitTypeId.HIGHTEMPLAR)
+        for ht in templars:
+            ht(AbilityId.MORPH_ARCHON)
+
+        if  archon_ratio < DESIRED_ARCHON_RATIO:
+
+            if self.structures(UnitTypeId.WARPGATE).ready.idle:
+                if self.can_afford(UnitTypeId.HIGHTEMPLAR):
+                    await self.warp_in_unit(AbilityId.WARPGATETRAIN_HIGHTEMPLAR, UnitTypeId.HIGHTEMPLAR)
+
+        if stalker_ratio < DESIRED_STALKER_RATIO or not self.structures(UnitTypeId.ROBOTICSFACILITY):
+            if self.can_afford(UnitTypeId.STALKER):
+                await self.warp_in_unit(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER)
+
+        if zealot_ratio < DESIRED_ZEALOT_RATIO:
+            if self.can_afford(UnitTypeId.ZEALOT) and self.already_pending_upgrade(UpgradeId.CHARGE) == 1:
+                await self.warp_in_unit(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT)
+
+
+    async def gather_army(self):
+        if int(self.time) % 12 == 0:
+            army = self.units.not_structure.exclude_type(UnitTypeId.PROBE)
+
+            for unit in army:
+                unit.move(self.army_gather_point)
+
 def main():
     sc2.run_game(
         sc2.maps.get("AcolyteLE"),
