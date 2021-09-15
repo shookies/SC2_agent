@@ -7,3 +7,6 @@ Currently a basic scripted agent that amasses an army of Zealots, Archons and Im
 - Optimize, optimize, optimize
 - Add smarter strategy making based current state of the game (Invest in economy or army, scouting info etc)
 - Add tactical decision making (micro) in battles (Retreat, stutter-step, spells, positioning etc)
+
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/8C_q2S9ocLE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
