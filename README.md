@@ -1,6 +1,6 @@
 # Starcraft 2 Agent using python-sc2 and PySC2
 
-Currently a basic scripted agent that amasses an army of Zealots, Archons and Immortals, upgrades ground weapons and armor and attacks the opponent when army supply is enough.
+Currently a scripted agent that amasses an army of Zealots, Archons and Immortals, upgrades ground weapons and armor and attacks the opponent when army supply is enough.
 
  _Road Plan for the agent (In the hopes that it would be able to play league matches in SC2AI bot league):_
 
